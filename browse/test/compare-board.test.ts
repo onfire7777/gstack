@@ -14,6 +14,7 @@ import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import { BrowserManager } from '../src/browser-manager';
 import { handleReadCommand as _handleReadCommand } from '../src/read-commands';
 import { handleWriteCommand as _handleWriteCommand } from '../src/write-commands';
+import { browserE2EDisabledOnWindows, describeBrowserE2E } from './browser-e2e-guard';
 
 const handleReadCommand = (cmd: string, args: string[], b: BrowserManager) =>
   _handleReadCommand(cmd, args, b.getActiveSession());
@@ -39,6 +40,7 @@ function createTestPng(filePath: string): void {
 }
 
 beforeAll(async () => {
+  if (browserE2EDisabledOnWindows) return;
   // Create test PNG files
   tmpDir = '/tmp/compare-board-test-' + Date.now();
   fs.mkdirSync(tmpDir, { recursive: true });
@@ -69,15 +71,16 @@ beforeAll(async () => {
   await handleWriteCommand('goto', [boardUrl], bm);
 });
 
-afterAll(() => {
+afterAll(async () => {
+  if (browserE2EDisabledOnWindows) return;
   try { server.stop(); } catch {}
   fs.rmSync(tmpDir, { recursive: true, force: true });
-  setTimeout(() => process.exit(0), 500);
+  try { await bm?.close?.(); } catch {}
 });
 
 // ─── DOM Structure ──────────────────────────────────────────────
 
-describe('Comparison board DOM structure', () => {
+describeBrowserE2E('Comparison board DOM structure', () => {
   test('has hidden status element', async () => {
     const status = await handleReadCommand('js', [
       'document.getElementById("status").textContent'
@@ -130,7 +133,7 @@ describe('Comparison board DOM structure', () => {
 
 // ─── Submit Flow ────────────────────────────────────────────────
 
-describe('Submit feedback flow', () => {
+describeBrowserE2E('Submit feedback flow', () => {
   test('submit without interaction returns empty preferred', async () => {
     // Reset page state
     await handleWriteCommand('goto', [boardUrl], bm);
@@ -227,7 +230,7 @@ describe('Submit feedback flow', () => {
 
 // ─── Regenerate Flow ────────────────────────────────────────────
 
-describe('Regenerate flow', () => {
+describeBrowserE2E('Regenerate flow', () => {
   test('regenerate button sets status to "regenerate"', async () => {
     // Fresh page
     await handleWriteCommand('goto', [boardUrl], bm);
@@ -301,7 +304,7 @@ describe('Regenerate flow', () => {
 
 // ─── Agent Polling Pattern ──────────────────────────────────────
 
-describe('Agent polling pattern (simulates what $B eval does)', () => {
+describeBrowserE2E('Agent polling pattern (simulates what $B eval does)', () => {
   test('status is empty before user action', async () => {
     // Fresh page — simulates agent's first poll
     await handleWriteCommand('goto', [boardUrl], bm);

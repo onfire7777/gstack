@@ -30,11 +30,35 @@ const BIN = path.join(ROOT, 'bin');
 let tmpHome: string;
 let bareRemote: string;
 
+function toBashPath(file: string) {
+  const normalized = file.replace(/\\/g, '/');
+  const match = normalized.match(/^([A-Za-z]):\/(.*)$/);
+  if (!match) return normalized;
+  return `/mnt/${match[1].toLowerCase()}/${match[2]}`;
+}
+
+function toBashArg(value: string) {
+  return /^[A-Za-z]:[\\/]/.test(value) ? toBashPath(value) : value;
+}
+
 function run(argv: string[], opts: { env?: Record<string, string>; input?: string } = {}) {
   const bin = argv[0];
-  const full = bin.startsWith('/') ? bin : path.join(BIN, bin);
-  const res = spawnSync(full, argv.slice(1), {
-    env: { ...process.env, GSTACK_HOME: tmpHome, ...(opts.env || {}) },
+  const full = path.isAbsolute(bin) ? bin : path.join(BIN, bin);
+  const useBash = process.platform === 'win32' && fs.existsSync(full) && !path.extname(full);
+  const overrideEnv = { GSTACK_HOME: tmpHome, ...(opts.env || {}) };
+  const env = { ...process.env, ...overrideEnv };
+  const command = useBash ? 'wsl.exe' : full;
+  const args = useBash
+    ? [
+        'env',
+        ...Object.entries(overrideEnv)
+          .map(([key, value]) => `${key}=${toBashArg(String(value))}`),
+        toBashPath(full),
+        ...argv.slice(1).map((arg) => toBashArg(arg)),
+      ]
+    : argv.slice(1);
+  const res = spawnSync(command, args, {
+    env,
     encoding: 'utf-8',
     input: opts.input,
     cwd: ROOT,
@@ -159,8 +183,11 @@ describe('gstack-brain-enqueue', () => {
     const procs = [];
     for (let i = 0; i < 10; i++) {
       procs.push(new Promise<void>((resolve) => {
-        const r = spawnSync(path.join(BIN, 'gstack-brain-enqueue'), [`file-${i}.jsonl`], {
-          env: { ...process.env, GSTACK_HOME: tmpHome },
+        const enqueue = path.join(BIN, 'gstack-brain-enqueue');
+        const useBash = process.platform === 'win32';
+        const env = { ...process.env, GSTACK_HOME: tmpHome };
+        const r = spawnSync(useBash ? 'wsl.exe' : enqueue, useBash ? ['env', `GSTACK_HOME=${toBashPath(tmpHome)}`, toBashPath(enqueue), `file-${i}.jsonl`] : [`file-${i}.jsonl`], {
+          env,
           encoding: 'utf-8',
         });
         resolve();

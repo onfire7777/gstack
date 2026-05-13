@@ -12,6 +12,7 @@ import { resolveServerScript } from '../src/cli';
 import { handleReadCommand as _handleReadCommand, parseOutArgs, hasOutArg, resultToString } from '../src/read-commands';
 import { handleWriteCommand as _handleWriteCommand } from '../src/write-commands';
 import { handleMetaCommand } from '../src/meta-commands';
+import { browserE2EDisabledOnWindows, describeBrowserE2E } from './browser-e2e-guard';
 import { consoleBuffer, networkBuffer, dialogBuffer, addConsoleEntry, addNetworkEntry, addDialogEntry, CircularBuffer } from '../src/buffers';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
@@ -87,6 +88,7 @@ let bm: BrowserManager;
 let baseUrl: string;
 
 beforeAll(async () => {
+  if (browserE2EDisabledOnWindows) return;
   testServer = startTestServer(0);
   baseUrl = testServer.url;
 
@@ -94,16 +96,15 @@ beforeAll(async () => {
   await bm.launch();
 });
 
-afterAll(() => {
-  // Force kill browser instead of graceful close (avoids hang)
+afterAll(async () => {
+  if (browserE2EDisabledOnWindows) return;
   try { testServer.server.stop(); } catch {}
-  // bm.close() can hang — just let process exit handle it
-  setTimeout(() => process.exit(0), 500);
+  try { await bm?.close?.(); } catch {}
 });
 
 // ─── Navigation ─────────────────────────────────────────────────
 
-describe('Navigation', () => {
+describeBrowserE2E('Navigation', () => {
   test('goto navigates to URL', async () => {
     const result = await handleWriteCommand('goto', [baseUrl + '/basic.html'], bm);
     expect(result).toContain('Navigated to');
@@ -134,7 +135,7 @@ describe('Navigation', () => {
 
 // ─── Content Extraction ─────────────────────────────────────────
 
-describe('Content extraction', () => {
+describeBrowserE2E('Content extraction', () => {
   beforeAll(async () => {
     await handleWriteCommand('goto', [baseUrl + '/basic.html'], bm);
   });
@@ -192,7 +193,7 @@ describe('Content extraction', () => {
 
 // ─── JavaScript / CSS / Attrs ───────────────────────────────────
 
-describe('Inspection', () => {
+describeBrowserE2E('Inspection', () => {
   beforeAll(async () => {
     await handleWriteCommand('goto', [baseUrl + '/basic.html'], bm);
   });
@@ -402,7 +403,7 @@ describe('Inspection', () => {
 
 // ─── Interaction ────────────────────────────────────────────────
 
-describe('Interaction', () => {
+describeBrowserE2E('Interaction', () => {
   test('fill + click works on form', async () => {
     await handleWriteCommand('goto', [baseUrl + '/forms.html'], bm);
 
@@ -500,7 +501,7 @@ describe('Interaction', () => {
 
 // ─── SPA / Console / Network ───────────────────────────────────
 
-describe('SPA and buffers', () => {
+describeBrowserE2E('SPA and buffers', () => {
   test('wait handles delayed rendering', async () => {
     await handleWriteCommand('goto', [baseUrl + '/spa.html'], bm);
     const result = await handleWriteCommand('wait', ['.loaded'], bm);
@@ -538,7 +539,7 @@ describe('SPA and buffers', () => {
 
 // ─── Cookies / Storage ──────────────────────────────────────────
 
-describe('Cookies and storage', () => {
+describeBrowserE2E('Cookies and storage', () => {
   test('cookies returns array', async () => {
     await handleWriteCommand('goto', [baseUrl + '/basic.html'], bm);
     const result = await handleReadCommand('cookies', [], bm);
@@ -588,7 +589,7 @@ describe('Cookies and storage', () => {
 
 // ─── Performance ────────────────────────────────────────────────
 
-describe('Performance', () => {
+describeBrowserE2E('Performance', () => {
   test('perf returns timing data', async () => {
     await handleWriteCommand('goto', [baseUrl + '/basic.html'], bm);
     const result = await handleReadCommand('perf', [], bm);
@@ -601,7 +602,7 @@ describe('Performance', () => {
 
 // ─── Visual ─────────────────────────────────────────────────────
 
-describe('Visual', () => {
+describeBrowserE2E('Visual', () => {
   test('screenshot saves file', async () => {
     await handleWriteCommand('goto', [baseUrl + '/basic.html'], bm);
     const screenshotPath = '/tmp/browse-test-screenshot.png';
@@ -746,7 +747,7 @@ describe('Visual', () => {
 
 // ─── Tabs ───────────────────────────────────────────────────────
 
-describe('Tabs', () => {
+describeBrowserE2E('Tabs', () => {
   test('tabs lists all tabs', async () => {
     const result = await handleMetaCommand('tabs', [], bm, async () => {});
     expect(result).toContain('[');
@@ -779,7 +780,7 @@ describe('Tabs', () => {
 
 // ─── Diff ───────────────────────────────────────────────────────
 
-describe('Diff', () => {
+describeBrowserE2E('Diff', () => {
   test('diff shows differences between pages', async () => {
     const result = await handleMetaCommand(
       'diff',
@@ -797,7 +798,7 @@ describe('Diff', () => {
 
 // ─── Chain ──────────────────────────────────────────────────────
 
-describe('Chain', () => {
+describeBrowserE2E('Chain', () => {
   test('chain executes sequence of commands', async () => {
     const commands = JSON.stringify([
       ['goto', baseUrl + '/basic.html'],
@@ -830,7 +831,7 @@ describe('Chain', () => {
 
 // ─── Status ─────────────────────────────────────────────────────
 
-describe('Status', () => {
+describeBrowserE2E('Status', () => {
   test('status reports health', async () => {
     const result = await handleMetaCommand('status', [], bm, async () => {});
     expect(result).toContain('Status: healthy');
@@ -840,7 +841,7 @@ describe('Status', () => {
 
 // ─── CLI server script resolution ───────────────────────────────
 
-describe('CLI server script resolution', () => {
+describeBrowserE2E('CLI server script resolution', () => {
   test('prefers adjacent browse/src/server.ts for compiled project installs', () => {
     const root = fs.mkdtempSync('/tmp/gstack-cli-');
     const execPath = path.join(root, '.claude/skills/gstack/browse/dist/browse');
@@ -864,7 +865,7 @@ describe('CLI server script resolution', () => {
 
 // ─── CLI lifecycle ──────────────────────────────────────────────
 
-describe('CLI lifecycle', () => {
+describeBrowserE2E('CLI lifecycle', () => {
   test('dead state file triggers a clean restart', async () => {
     const stateFile = `/tmp/browse-test-state-${Date.now()}.json`;
     fs.writeFileSync(stateFile, JSON.stringify({
@@ -908,7 +909,7 @@ describe('CLI lifecycle', () => {
 
 // ─── Buffer bounds ──────────────────────────────────────────────
 
-describe('Buffer bounds', () => {
+describeBrowserE2E('Buffer bounds', () => {
   test('console buffer caps at 50000 entries', () => {
     consoleBuffer.clear();
     for (let i = 0; i < 50_010; i++) {
@@ -949,7 +950,7 @@ describe('Buffer bounds', () => {
 
 // ─── CircularBuffer Unit Tests ─────────────────────────────────
 
-describe('CircularBuffer', () => {
+describeBrowserE2E('CircularBuffer', () => {
   test('push and toArray return items in insertion order', () => {
     const buf = new CircularBuffer<number>(5);
     buf.push(1); buf.push(2); buf.push(3);
@@ -1012,7 +1013,7 @@ describe('CircularBuffer', () => {
 
 // ─── Dialog Handling ─────────────────────────────────────────
 
-describe('Dialog handling', () => {
+describeBrowserE2E('Dialog handling', () => {
   test('alert does not hang — auto-accepted', async () => {
     await handleWriteCommand('goto', [baseUrl + '/dialog.html'], bm);
     await handleWriteCommand('click', ['#alert-btn'], bm);
@@ -1070,7 +1071,7 @@ describe('Dialog handling', () => {
 
 // ─── Element State Checks (is) ─────────────────────────────────
 
-describe('Element state checks', () => {
+describeBrowserE2E('Element state checks', () => {
   beforeAll(async () => {
     await handleWriteCommand('goto', [baseUrl + '/states.html'], bm);
   });
@@ -1162,7 +1163,7 @@ describe('Element state checks', () => {
 
 // ─── File Upload ─────────────────────────────────────────────────
 
-describe('File upload', () => {
+describeBrowserE2E('File upload', () => {
   test('upload single file', async () => {
     await handleWriteCommand('goto', [baseUrl + '/upload.html'], bm);
     // Create a temp file to upload
@@ -1212,7 +1213,7 @@ describe('File upload', () => {
 
 // ─── Eval command ───────────────────────────────────────────────
 
-describe('Eval', () => {
+describeBrowserE2E('Eval', () => {
   test('eval runs JS file', async () => {
     await handleWriteCommand('goto', [baseUrl + '/basic.html'], bm);
     const tempFile = '/tmp/browse-test-eval.js';
@@ -1253,7 +1254,7 @@ describe('Eval', () => {
 
 // ─── Press command ──────────────────────────────────────────────
 
-describe('Press', () => {
+describeBrowserE2E('Press', () => {
   test('press Tab moves focus', async () => {
     await handleWriteCommand('goto', [baseUrl + '/forms.html'], bm);
     await handleWriteCommand('click', ['#email'], bm);
@@ -1273,7 +1274,7 @@ describe('Press', () => {
 
 // ─── Cookie command ─────────────────────────────────────────────
 
-describe('Cookie command', () => {
+describeBrowserE2E('Cookie command', () => {
   test('cookie sets value', async () => {
     await handleWriteCommand('goto', [baseUrl + '/basic.html'], bm);
     const result = await handleWriteCommand('cookie', ['testcookie=testvalue'], bm);
@@ -1305,7 +1306,7 @@ describe('Cookie command', () => {
 
 // ─── Header command ─────────────────────────────────────────────
 
-describe('Header command', () => {
+describeBrowserE2E('Header command', () => {
   test('header sets value and is sent', async () => {
     const result = await handleWriteCommand('header', ['X-Test:test-value'], bm);
     expect(result).toContain('Header set');
@@ -1337,7 +1338,7 @@ describe('Header command', () => {
 
 // ─── PDF command ────────────────────────────────────────────────
 
-describe('PDF', () => {
+describeBrowserE2E('PDF', () => {
   test('pdf saves file with size', async () => {
     await handleWriteCommand('goto', [baseUrl + '/basic.html'], bm);
     const pdfPath = '/tmp/browse-test.pdf';
@@ -1352,7 +1353,7 @@ describe('PDF', () => {
 
 // ─── Empty page edge cases ──────────────────────────────────────
 
-describe('Empty page', () => {
+describeBrowserE2E('Empty page', () => {
   test('text returns empty on empty page', async () => {
     await handleWriteCommand('goto', [baseUrl + '/empty.html'], bm);
     const result = await handleReadCommand('text', [], bm);
@@ -1372,7 +1373,7 @@ describe('Empty page', () => {
 
 // ─── Error paths ────────────────────────────────────────────────
 
-describe('Errors', () => {
+describeBrowserE2E('Errors', () => {
   // Write command errors
   test('goto with no arg throws', async () => {
     try {
@@ -1549,7 +1550,7 @@ describe('Errors', () => {
 
 // ─── Workflow: Navigation + Snapshot + Interaction ───────────────
 
-describe('Workflows', () => {
+describeBrowserE2E('Workflows', () => {
   test('navigation → snapshot → click @ref → verify URL', async () => {
     await handleWriteCommand('goto', [baseUrl + '/snapshot.html'], bm);
     const snap = await handleMetaCommand('snapshot', ['-i'], bm, async () => {});
@@ -1615,7 +1616,7 @@ describe('Workflows', () => {
 
 // ─── Wait load states ──────────────────────────────────────────
 
-describe('Wait load states', () => {
+describeBrowserE2E('Wait load states', () => {
   test('wait --networkidle succeeds after page load', async () => {
     await handleWriteCommand('goto', [baseUrl + '/basic.html'], bm);
     const result = await handleWriteCommand('wait', ['--networkidle'], bm);
@@ -1649,7 +1650,7 @@ describe('Wait load states', () => {
 
 // ─── Console --errors ──────────────────────────────────────────
 
-describe('Console --errors', () => {
+describeBrowserE2E('Console --errors', () => {
   test('console --errors filters to error and warning only', async () => {
     // Clear existing entries
     await handleReadCommand('console', ['--clear'], bm);
@@ -1697,7 +1698,7 @@ describe('Console --errors', () => {
 
 // ─── Cookie Import ─────────────────────────────────────────────
 
-describe('Cookie import', () => {
+describeBrowserE2E('Cookie import', () => {
   test('cookie-import loads valid JSON cookies', async () => {
     await handleWriteCommand('goto', [baseUrl + '/basic.html'], bm);
     const tempFile = '/tmp/browse-test-cookies.json';
@@ -1823,7 +1824,7 @@ describe('Cookie import', () => {
 
 // ─── Security: Redact sensitive values (PR #21) ─────────────────
 
-describe('Sensitive value redaction', () => {
+describeBrowserE2E('Sensitive value redaction', () => {
   test('type command does not echo typed text', async () => {
     await handleWriteCommand('goto', [baseUrl + '/basic.html'], bm);
     const result = await handleWriteCommand('type', ['my-secret-password'], bm);
@@ -1884,7 +1885,7 @@ describe('Sensitive value redaction', () => {
 
 // ─── Security: Path traversal prevention (PR #26) ───────────────
 
-describe('Path traversal prevention', () => {
+describeBrowserE2E('Path traversal prevention', () => {
   test('screenshot rejects path outside safe dirs', async () => {
     await handleWriteCommand('goto', [baseUrl + '/basic.html'], bm);
     try {
@@ -1995,7 +1996,7 @@ describe('Path traversal prevention', () => {
 
 // ─── Chain command: cookie-import in chain ──────────────────────
 
-describe('Chain with cookie-import', () => {
+describeBrowserE2E('Chain with cookie-import', () => {
   test('cookie-import works inside chain', async () => {
     await handleWriteCommand('goto', [baseUrl + '/basic.html'], bm);
     const tmpCookies = '/tmp/test-chain-cookies.json';
@@ -2017,7 +2018,7 @@ describe('Chain with cookie-import', () => {
 
 // ─── Network Idle Detection ─────────────────────────────────────
 
-describe('Network idle', () => {
+describeBrowserE2E('Network idle', () => {
   test('click on fetch button waits for XHR to complete', async () => {
     await handleWriteCommand('goto', [baseUrl + '/network-idle.html'], bm);
     // Click the button that triggers a fetch → networkidle waits for it
@@ -2049,7 +2050,7 @@ describe('Network idle', () => {
 
 // ─── Chain Pipe Format ──────────────────────────────────────────
 
-describe('Chain pipe format', () => {
+describeBrowserE2E('Chain pipe format', () => {
   test('pipe-delimited commands work', async () => {
     const result = await handleMetaCommand(
       'chain',
@@ -2100,7 +2101,7 @@ describe('Chain pipe format', () => {
 
 // ─── State Persistence ──────────────────────────────────────────
 
-describe('State persistence', () => {
+describeBrowserE2E('State persistence', () => {
   test('state save and load round-trip', async () => {
     await handleWriteCommand('goto', [baseUrl + '/basic.html'], bm);
     // Set a cookie so we can verify it persists
@@ -2171,7 +2172,7 @@ describe('State persistence', () => {
 
 // ─── Frame (Iframe Support) ─────────────────────────────────────
 
-describe('Frame', () => {
+describeBrowserE2E('Frame', () => {
   test('frame switch to iframe and back', async () => {
     await handleWriteCommand('goto', [baseUrl + '/iframe.html'], bm);
 
@@ -2246,7 +2247,7 @@ describe('Frame', () => {
 
 // ─── load-html ─────────────────────────────────────────────────
 
-describe('load-html', () => {
+describeBrowserE2E('load-html', () => {
   const tmpDir = '/tmp';
   const fixturePath = path.join(tmpDir, `browse-test-loadhtml-${Date.now()}.html`);
   const fragmentPath = path.join(tmpDir, `browse-test-fragment-${Date.now()}.html`);
@@ -2378,7 +2379,7 @@ describe('load-html', () => {
 
 // ─── screenshot --selector ─────────────────────────────────────
 
-describe('screenshot --selector', () => {
+describeBrowserE2E('screenshot --selector', () => {
   test('--selector flag with output path captures element', async () => {
     await handleWriteCommand('goto', [baseUrl + '/basic.html'], bm);
     const p = `/tmp/browse-test-selector-${Date.now()}.png`;
@@ -2427,7 +2428,7 @@ describe('screenshot --selector', () => {
 
 // ─── viewport --scale ───────────────────────────────────────────
 
-describe('viewport --scale', () => {
+describeBrowserE2E('viewport --scale', () => {
   test('viewport WxH --scale 2 produces 2x dimension screenshot', async () => {
     const tmpFix = path.join('/tmp', `scale-${Date.now()}.html`);
     fs.writeFileSync(tmpFix, '<div id="box" style="width:100px;height:50px;background:#f00"></div>');
@@ -2505,7 +2506,7 @@ describe('viewport --scale', () => {
 
 // ─── setContent replay across context recreation ────────────────
 
-describe('setContent replay (load-html survives viewport --scale)', () => {
+describeBrowserE2E('setContent replay (load-html survives viewport --scale)', () => {
   const tmpDir = '/tmp';
 
   test('load-html → viewport --scale 2 → content survives', async () => {
@@ -2556,7 +2557,7 @@ describe('setContent replay (load-html survives viewport --scale)', () => {
 
 // ─── Alias routing ─────────────────────────────────────────────
 
-describe('Command aliases', () => {
+describeBrowserE2E('Command aliases', () => {
   const tmpDir = '/tmp';
   const aliasFix = path.join(tmpDir, `alias-${Date.now()}.html`);
 

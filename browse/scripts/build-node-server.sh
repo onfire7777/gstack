@@ -11,7 +11,66 @@ GSTACK_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 SRC_DIR="$GSTACK_DIR/browse/src"
 DIST_DIR="$GSTACK_DIR/browse/dist"
 
+BUN_BIN="${BUN_BIN:-}"
+if [ -z "$BUN_BIN" ]; then
+  if command -v bun >/dev/null 2>&1; then
+    BUN_BIN="$(command -v bun)"
+  elif command -v bun.exe >/dev/null 2>&1; then
+    BUN_BIN="$(command -v bun.exe)"
+  elif [ -n "${HOME:-}" ] && [ -x "$HOME/.bun/bin/bun.exe" ]; then
+    BUN_BIN="$HOME/.bun/bin/bun.exe"
+  elif [ -n "${USERPROFILE:-}" ] && command -v cygpath >/dev/null 2>&1; then
+    USERPROFILE_UNIX="$(cygpath -u "$USERPROFILE" 2>/dev/null || true)"
+    if [ -n "$USERPROFILE_UNIX" ] && [ -x "$USERPROFILE_UNIX/.bun/bin/bun.exe" ]; then
+      BUN_BIN="$USERPROFILE_UNIX/.bun/bin/bun.exe"
+    fi
+  fi
+fi
+
+if [ -z "$BUN_BIN" ]; then
+  echo "bun not found; install Bun or set BUN_BIN to the Bun executable" >&2
+  exit 127
+fi
+
+to_windows_path() {
+  local path="$1"
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -w "$path"
+    return
+  fi
+  case "$path" in
+    /mnt/[a-zA-Z]/*)
+      local drive
+      local rest
+      drive="$(printf '%s' "${path:5:1}" | tr '[:lower:]' '[:upper:]')"
+      rest="${path:7}"
+      rest="${rest//\//\\}"
+      printf '%s:\\%s\n' "$drive" "$rest"
+      ;;
+    /[a-zA-Z]/*)
+      local drive
+      local rest
+      drive="$(printf '%s' "${path:1:1}" | tr '[:lower:]' '[:upper:]')"
+      rest="${path:3}"
+      rest="${rest//\//\\}"
+      printf '%s:\\%s\n' "$drive" "$rest"
+      ;;
+    *)
+      printf '%s\n' "$path"
+      ;;
+  esac
+}
+
 echo "Building Node-compatible server bundle..."
+
+BUN_SERVER_TS="$SRC_DIR/server.ts"
+BUN_OUTFILE="$DIST_DIR/server-node.mjs"
+case "$BUN_BIN" in
+  *.exe | *.cmd | *bun.exe | *bun.cmd)
+    BUN_SERVER_TS="$(to_windows_path "$BUN_SERVER_TS")"
+    BUN_OUTFILE="$(to_windows_path "$BUN_OUTFILE")"
+    ;;
+esac
 
 # Step 1: Transpile server.ts to a single .mjs bundle (externalize runtime deps)
 #
@@ -19,9 +78,9 @@ echo "Building Node-compatible server bundle..."
 # If you add a new dependency that uses `await import()` or has a .node addon,
 # add it here. Otherwise `bun build --outfile` will fail with
 # "cannot write multiple output files without an output directory".
-bun build "$SRC_DIR/server.ts" \
+"$BUN_BIN" build "$BUN_SERVER_TS" \
   --target=node \
-  --outfile "$DIST_DIR/server-node.mjs" \
+  --outfile "$BUN_OUTFILE" \
   --external playwright \
   --external playwright-core \
   --external diff \

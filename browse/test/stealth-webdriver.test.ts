@@ -1,14 +1,17 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import { chromium, type Browser, type BrowserContext } from 'playwright';
 import { applyStealth, WEBDRIVER_MASK_SCRIPT, STEALTH_LAUNCH_ARGS } from '../src/stealth';
+import { browserE2EDisabledOnWindows, describeBrowserE2E } from './browser-e2e-guard';
 
 let browser: Browser;
 
 beforeAll(async () => {
+  if (browserE2EDisabledOnWindows) return;
   browser = await chromium.launch({ headless: true, args: STEALTH_LAUNCH_ARGS });
 });
 
 afterAll(async () => {
+  if (browserE2EDisabledOnWindows) return;
   await browser.close();
 });
 
@@ -32,7 +35,7 @@ describe('WEBDRIVER_MASK_SCRIPT', () => {
   });
 });
 
-describe('applyStealth — context level', () => {
+describeBrowserE2E('applyStealth - context level', () => {
   let context: BrowserContext;
 
   beforeAll(async () => {
@@ -205,7 +208,7 @@ describe('applyStealth — context level', () => {
   });
 });
 
-describe('applyStealth — per-install hardware from env', () => {
+describeBrowserE2E('applyStealth — per-install hardware from env', () => {
   let ctx: BrowserContext;
   let savedHw: string | undefined;
   let savedMem: string | undefined;
@@ -242,7 +245,7 @@ describe('applyStealth — per-install hardware from env', () => {
   });
 });
 
-describe('applyStealth — extended mode layered on Layer C (GSTACK_STEALTH=extended)', () => {
+describeBrowserE2E('applyStealth — extended mode layered on Layer C (GSTACK_STEALTH=extended)', () => {
   let ctx: BrowserContext;
   let savedStealth: string | undefined;
 
@@ -293,7 +296,7 @@ describe('applyStealth — extended mode layered on Layer C (GSTACK_STEALTH=exte
   });
 });
 
-describe('applyStealth — persistent context (headed + handoff parity)', () => {
+describeBrowserE2E('applyStealth — persistent context (headed + handoff parity)', () => {
   test('full Layer C applies to launchPersistentContext (the launchHeaded/handoff path)', async () => {
     // Simulate the launchHeaded/handoff path: launchPersistentContext +
     // applyStealth. Verifies the persistent-context path gets the SAME Layer C

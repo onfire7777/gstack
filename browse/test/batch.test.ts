@@ -8,6 +8,7 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import { startTestServer } from './test-server';
 import { BrowserManager } from '../src/browser-manager';
+import { browserE2EDisabledOnWindows, describeBrowserE2E } from './browser-e2e-guard';
 
 let testServer: ReturnType<typeof startTestServer>;
 let bm: BrowserManager;
@@ -28,6 +29,7 @@ async function batch(commands: any[], opts: { timeout?: number; stream?: boolean
 }
 
 beforeAll(async () => {
+  if (browserE2EDisabledOnWindows) return;
   testServer = startTestServer(0);
   baseUrl = testServer.url;
 
@@ -40,12 +42,13 @@ beforeAll(async () => {
   // The server is already started by launch — we need the port
   // Actually, BrowserManager.launch() starts the browser, not the server.
   // The test needs to start a server. Let's use the existing server infrastructure.
-});
+}, 30000);
 
-afterAll(() => {
+afterAll(async () => {
+  if (browserE2EDisabledOnWindows) return;
+  try { await bm?.close(); } catch {}
   try { testServer.server.stop(); } catch {}
-  setTimeout(() => process.exit(0), 500);
-});
+}, 30000);
 
 // We need a running browse server for HTTP tests.
 // The commands.test.ts tests call handlers directly, but batch tests need the HTTP endpoint.
@@ -62,7 +65,7 @@ const handleReadCommand = (cmd: string, args: string[], b: BrowserManager) =>
 const handleWriteCommand = (cmd: string, args: string[], b: BrowserManager) =>
   _handleWriteCommand(cmd, args, b.getActiveSession(), b);
 
-describe('Batch execution', () => {
+describeBrowserE2E('Batch execution', () => {
   test('multi-tab parallel: goto + text on different tabs', async () => {
     // Create two tabs
     const tab1 = await bm.newTab(baseUrl + '/basic.html');
