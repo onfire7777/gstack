@@ -16,6 +16,7 @@ import * as os from 'os';
 import { promises as fs } from 'fs';
 import { startTestServer } from './test-server';
 import { BrowserManager } from '../src/browser-manager';
+import { browserE2EDisabledOnWindows, describeBrowserE2E } from './browser-e2e-guard';
 
 const TMP_HOME = path.join(os.tmpdir(), `gstack-cdp-e2e-${process.pid}-${Date.now()}`);
 process.env.GSTACK_HOME = TMP_HOME;
@@ -26,6 +27,7 @@ let bm: BrowserManager;
 let baseUrl: string;
 
 beforeAll(async () => {
+  if (browserE2EDisabledOnWindows) return;
   await fs.rm(TMP_HOME, { recursive: true, force: true });
   await fs.mkdir(TMP_HOME, { recursive: true });
   testServer = startTestServer(0);
@@ -36,12 +38,13 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (browserE2EDisabledOnWindows) return;
   try { await bm.cleanup?.(); } catch {}
   try { testServer.server.stop(); } catch {}
   await fs.rm(TMP_HOME, { recursive: true, force: true });
 });
 
-describe('$B cdp (E2E gate tier)', () => {
+describeBrowserE2E('$B cdp (E2E gate tier)', () => {
   test('Accessibility.getFullAXTree (allowed, untrusted-output) returns wrapped JSON', async () => {
     const { handleCdpCommand } = await import('../src/cdp-commands');
     const out = await handleCdpCommand(['Accessibility.getFullAXTree', '{}'], bm);

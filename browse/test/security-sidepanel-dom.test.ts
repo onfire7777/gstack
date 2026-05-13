@@ -26,6 +26,7 @@ import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import * as fs from 'fs';
 import * as path from 'path';
 import { chromium, type Browser, type Page } from 'playwright';
+import { browserE2EDisabledOnWindows } from './browser-e2e-guard';
 
 const EXTENSION_DIR = path.resolve(import.meta.dir, '..', '..', 'extension');
 const SIDEPANEL_URL = `file://${EXTENSION_DIR}/sidepanel.html`;
@@ -37,6 +38,7 @@ const SIDEPANEL_URL = `file://${EXTENSION_DIR}/sidepanel.html`;
  * unconditionally get registered as `skip: true`. We need a sync check.
  */
 const CHROMIUM_AVAILABLE = (() => {
+  if (browserE2EDisabledOnWindows) return false;
   try {
     const exe = chromium.executablePath();
     return !!exe && fs.existsSync(exe);

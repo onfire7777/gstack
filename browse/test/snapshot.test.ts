@@ -11,6 +11,7 @@ import { BrowserManager } from '../src/browser-manager';
 import { handleReadCommand as _handleReadCommand } from '../src/read-commands';
 import { handleWriteCommand as _handleWriteCommand } from '../src/write-commands';
 import { handleMetaCommand } from '../src/meta-commands';
+import { browserE2EDisabledOnWindows, describeBrowserE2E } from './browser-e2e-guard';
 import * as fs from 'fs';
 
 const handleReadCommand = (cmd: string, args: string[], b: BrowserManager) =>
@@ -24,6 +25,7 @@ let baseUrl: string;
 const shutdown = async () => {};
 
 beforeAll(async () => {
+  if (browserE2EDisabledOnWindows) return;
   testServer = startTestServer(0);
   baseUrl = testServer.url;
 
@@ -31,14 +33,15 @@ beforeAll(async () => {
   await bm.launch();
 });
 
-afterAll(() => {
+afterAll(async () => {
+  if (browserE2EDisabledOnWindows) return;
   try { testServer.server.stop(); } catch {}
-  setTimeout(() => process.exit(0), 500);
+  try { await bm?.close?.(); } catch {}
 });
 
 // ─── Snapshot Output ────────────────────────────────────────────
 
-describe('Snapshot', () => {
+describeBrowserE2E('Snapshot', () => {
   test('snapshot returns accessibility tree with refs', async () => {
     await handleWriteCommand('goto', [baseUrl + '/snapshot.html'], bm);
     const result = await handleMetaCommand('snapshot', [], bm, shutdown);
@@ -107,7 +110,7 @@ describe('Snapshot', () => {
 
 // ─── Ref-Based Interaction ──────────────────────────────────────
 
-describe('Ref resolution', () => {
+describeBrowserE2E('Ref resolution', () => {
   test('click @ref works after snapshot', async () => {
     await handleWriteCommand('goto', [baseUrl + '/snapshot.html'], bm);
     const snap = await handleMetaCommand('snapshot', ['-i'], bm, shutdown);
@@ -180,7 +183,7 @@ describe('Ref resolution', () => {
 
 // ─── Ref Invalidation ───────────────────────────────────────────
 
-describe('Ref invalidation', () => {
+describeBrowserE2E('Ref invalidation', () => {
   test('stale ref after goto returns clear error', async () => {
     await handleWriteCommand('goto', [baseUrl + '/snapshot.html'], bm);
     await handleMetaCommand('snapshot', ['-i'], bm, shutdown);
@@ -209,7 +212,7 @@ describe('Ref invalidation', () => {
 
 // ─── Ref Staleness Detection ────────────────────────────────────
 
-describe('Ref staleness detection', () => {
+describeBrowserE2E('Ref staleness detection', () => {
   test('ref metadata stores role and name', async () => {
     await handleWriteCommand('goto', [baseUrl + '/snapshot.html'], bm);
     await handleMetaCommand('snapshot', ['-i'], bm, shutdown);
@@ -257,7 +260,7 @@ describe('Ref staleness detection', () => {
 
 // ─── Snapshot Diffing ──────────────────────────────────────────
 
-describe('Snapshot diff', () => {
+describeBrowserE2E('Snapshot diff', () => {
   test('first snapshot -D stores baseline', async () => {
     // Clear any previous snapshot
     bm.setLastSnapshot(null);
@@ -295,7 +298,7 @@ describe('Snapshot diff', () => {
 
 // ─── Annotated Screenshots ─────────────────────────────────────
 
-describe('Annotated screenshots', () => {
+describeBrowserE2E('Annotated screenshots', () => {
   test('snapshot -a creates annotated screenshot', async () => {
     const screenshotPath = '/tmp/browse-test-annotated.png';
     await handleWriteCommand('goto', [baseUrl + '/snapshot.html'], bm);
@@ -340,7 +343,7 @@ describe('Annotated screenshots', () => {
 
 // ─── Cursor-Interactive ────────────────────────────────────────
 
-describe('Cursor-interactive', () => {
+describeBrowserE2E('Cursor-interactive', () => {
   test('snapshot -C finds cursor:pointer elements', async () => {
     await handleWriteCommand('goto', [baseUrl + '/cursor-interactive.html'], bm);
     const result = await handleMetaCommand('snapshot', ['-C'], bm, shutdown);
@@ -405,7 +408,7 @@ describe('Cursor-interactive', () => {
 
 // ─── Dropdown/Popover Detection ─────────────────────────────────
 
-describe('Dropdown/popover detection', () => {
+describeBrowserE2E('Dropdown/popover detection', () => {
   test('snapshot -i auto-enables cursor scan and finds dropdown items', async () => {
     await handleWriteCommand('goto', [baseUrl + '/dropdown.html'], bm);
     const result = await handleMetaCommand('snapshot', ['-i'], bm, shutdown);
@@ -464,7 +467,7 @@ describe('Dropdown/popover detection', () => {
 
 // ─── Snapshot Error Paths ───────────────────────────────────────
 
-describe('Snapshot errors', () => {
+describeBrowserE2E('Snapshot errors', () => {
   test('unknown flag throws', async () => {
     try {
       await handleMetaCommand('snapshot', ['--bogus'], bm, shutdown);
@@ -514,7 +517,7 @@ describe('Snapshot errors', () => {
 
 // ─── Combined Flags ─────────────────────────────────────────────
 
-describe('Snapshot combined flags', () => {
+describeBrowserE2E('Snapshot combined flags', () => {
   test('-i -c -d 2 combines all filters', async () => {
     await handleWriteCommand('goto', [baseUrl + '/snapshot.html'], bm);
     const result = await handleMetaCommand('snapshot', ['-i', '-c', '-d', '2'], bm, shutdown);

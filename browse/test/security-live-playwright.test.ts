@@ -26,6 +26,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { startTestServer } from './test-server';
 import { BrowserManager } from '../src/browser-manager';
+import { browserE2EDisabledOnWindows, describeBrowserE2E } from './browser-e2e-guard';
 import {
   markHiddenElements,
   getCleanTextWithStripping,
@@ -44,21 +45,23 @@ const MODEL_CACHE = path.join(
 );
 const ML_AVAILABLE = fs.existsSync(MODEL_CACHE);
 
-describe('defense-in-depth — live Playwright fixture', () => {
+describeBrowserE2E('defense-in-depth - live Playwright fixture', () => {
   let testServer: ReturnType<typeof startTestServer>;
   let bm: BrowserManager;
   let baseUrl: string;
 
   beforeAll(async () => {
+    if (browserE2EDisabledOnWindows) return;
     testServer = startTestServer(0);
     baseUrl = testServer.url;
     bm = new BrowserManager();
     await bm.launch();
   });
 
-  afterAll(() => {
+  afterAll(async () => {
+    if (browserE2EDisabledOnWindows) return;
+    try { await bm?.cleanup?.(); } catch {}
     try { testServer.server.stop(); } catch {}
-    setTimeout(() => process.exit(0), 500);
   });
 
   test('L2 — content-security.ts hidden-element stripper detects the .sneaky div', async () => {

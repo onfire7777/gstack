@@ -1,14 +1,17 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import { chromium, type Browser, type BrowserContext } from 'playwright';
 import { applyStealth, WEBDRIVER_MASK_SCRIPT, STEALTH_LAUNCH_ARGS } from '../src/stealth';
+import { browserE2EDisabledOnWindows, describeBrowserE2E } from './browser-e2e-guard';
 
 let browser: Browser;
 
 beforeAll(async () => {
+  if (browserE2EDisabledOnWindows) return;
   browser = await chromium.launch({ headless: true, args: STEALTH_LAUNCH_ARGS });
 });
 
 afterAll(async () => {
+  if (browserE2EDisabledOnWindows) return;
   await browser.close();
 });
 
@@ -32,7 +35,7 @@ describe('WEBDRIVER_MASK_SCRIPT', () => {
   });
 });
 
-describe('applyStealth — context level', () => {
+describeBrowserE2E('applyStealth - context level', () => {
   let context: BrowserContext;
 
   beforeAll(async () => {
@@ -100,7 +103,7 @@ describe('applyStealth — context level', () => {
   });
 });
 
-describe('applyStealth — persistent context (headed-mode parity)', () => {
+describeBrowserE2E('applyStealth - persistent context (headed-mode parity)', () => {
   test('webdriver mask applies to launchPersistentContext too (D7)', async () => {
     // Simulate the launchHeaded path: launchPersistentContext + applyStealth
     const fs = await import('fs');
