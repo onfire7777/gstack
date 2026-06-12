@@ -4,29 +4,14 @@ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Switch apt sources to Hetzner's public mirror.
-# Ubicloud runners (Hetzner FSN1-DC21) hit reliable connection timeouts to
-# archive.ubuntu.com:80 — observed 90+ second outages on multiple builds.
-# Hetzner's mirror is publicly accessible from any cloud and route-local for
-# Ubicloud, so this fixes both reliability and latency. Ubuntu 24.04 uses
-# the deb822 sources format at /etc/apt/sources.list.d/ubuntu.sources.
-#
-# Using HTTP (not HTTPS) intentionally: the base ubuntu:24.04 image ships
-# without ca-certificates, so HTTPS apt fails with "No system certificates
-# available." Apt's security model verifies via GPG-signed Release files,
-# not TLS, so HTTP here is no weaker than the upstream defaults.
-RUN sed -i \
-    -e 's|http://archive.ubuntu.com/ubuntu|http://mirror.hetzner.com/ubuntu/packages|g' \
-    -e 's|http://security.ubuntu.com/ubuntu|http://mirror.hetzner.com/ubuntu/packages|g' \
-    /etc/apt/sources.list.d/ubuntu.sources
-
-# Also make apt itself resilient — per-package retries + generous timeouts.
-# Hetzner's mirror is reliable but individual packages can still blip; the
-# retry config means a single failed fetch doesn't nuke the whole build.
+# Make apt resilient — per-package retries + generous timeouts.
+# Keep Ubuntu's default mirrors because this fork now runs CI on GitHub-hosted
+# runners; Hetzner-local mirrors are not reachable from that network.
+# The retry config means a single failed fetch doesn't nuke the whole build.
 RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' \
     > /etc/apt/apt.conf.d/80-retries
 
-# System deps (retry apt-get update + install as a unit — even Hetzner can blip).
+# System deps (retry apt-get update + install as a unit — mirrors can blip).
 # Includes xz-utils so the Node.js .tar.xz download below can decompress.
 RUN for i in 1 2 3; do \
       apt-get update && apt-get install -y --no-install-recommends \
@@ -48,12 +33,10 @@ RUN curl --retry 5 --retry-delay 5 --retry-connrefused -fsSL https://cli.github.
 
 # Node.js 22 LTS (needed for claude CLI).
 # Install from the official nodejs.org tarball instead of NodeSource's apt setup.
-# NodeSource's setup_22.x script runs its own `apt-get update` + `apt-get install gnupg`,
-# both of which depend on archive.ubuntu.com / security.ubuntu.com being reachable.
-# Ubicloud CI runners frequently can't reach those mirrors (connection timeouts),
-# and "gnupg" was renamed to "gpg" on Ubuntu 24.04 anyway, so NodeSource's script
-# fails before it can add its own repo. Direct tarball download is network-simpler
-# (one host: nodejs.org) and doesn't touch apt at all.
+# NodeSource's setup_22.x script performs extra apt update/install work and has
+# historically been sensitive to Ubuntu package naming (for example gnupg vs gpg
+# on Ubuntu 24.04). Direct tarball download is network-simpler (one host:
+# nodejs.org) and doesn't touch apt at all.
 ENV NODE_VERSION=22.20.0
 RUN curl --retry 5 --retry-delay 5 --retry-connrefused -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" -o /tmp/node.tar.xz \
     && tar -xJ -C /usr/local --strip-components=1 --no-same-owner -f /tmp/node.tar.xz \
