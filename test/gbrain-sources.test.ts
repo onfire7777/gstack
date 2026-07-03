@@ -12,7 +12,7 @@ import { mkdtempSync, writeFileSync, readFileSync, existsSync, mkdirSync, rmSync
 import { tmpdir } from "os";
 import { join } from "path";
 
-import { ensureSourceRegistered, probeSource, sourcePageCount } from "../lib/gbrain-sources";
+import { ensureSourceRegistered, probeSource, sourceIdForPath, sourcePageCount } from "../lib/gbrain-sources";
 
 interface FakeGbrainSetup {
   bindir: string;
@@ -119,6 +119,27 @@ describe("probeSource", () => {
     const state = probeSource("gstack-code-foo", fake.env);
     expect(state.status).toBe("match");
     expect(state.registered_path).toBe("/Users/me/repo");
+    fake.cleanup();
+  });
+});
+
+describe("sourceIdForPath", () => {
+  it("returns the existing source id for an already-registered repo path", () => {
+    const fake = makeFakeGbrain({
+      sources: [
+        { id: "mnemosyne-code", local_path: "/Users/me/Mnemosyne" },
+        { id: "gstack-code-other", local_path: "/Users/me/Other" },
+      ],
+    });
+    expect(sourceIdForPath("/Users/me/Mnemosyne", fake.env)).toBe("mnemosyne-code");
+    fake.cleanup();
+  });
+
+  it("returns null when no source owns the path", () => {
+    const fake = makeFakeGbrain({
+      sources: [{ id: "gstack-code-other", local_path: "/Users/me/Other" }],
+    });
+    expect(sourceIdForPath("/Users/me/Mnemosyne", fake.env)).toBeNull();
     fake.cleanup();
   });
 });

@@ -10,6 +10,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync, chmodSync, statSync } from "fs";
+import { execFileSync } from "child_process";
 import { tmpdir } from "os";
 import { join } from "path";
 
@@ -34,6 +35,21 @@ describe("ensureGbrainSourceGitignored", () => {
 
     expect(existsSync(gitignorePath)).toBe(true);
     expect(readFileSync(gitignorePath, "utf-8")).toBe(".gbrain-source\n");
+  });
+
+  it("prefers local git exclude in git repos and leaves tracked .gitignore alone", () => {
+    execFileSync("git", ["init"], { cwd: root, stdio: "ignore" });
+    const gitignorePath = join(root, ".gitignore");
+    const excludePath = join(root, ".git", "info", "exclude");
+    writeFileSync(gitignorePath, "node_modules\n");
+
+    ensureGbrainSourceGitignored(root);
+
+    expect(readFileSync(gitignorePath, "utf-8")).toBe("node_modules\n");
+    const excludeHasPin = readFileSync(excludePath, "utf-8")
+      .split("\n")
+      .some((line) => line.trim() === ".gbrain-source");
+    expect(excludeHasPin).toBe(true);
   });
 
   it("appends the pin entry to an existing .gitignore without trailing newline", () => {

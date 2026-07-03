@@ -30,14 +30,14 @@
  */
 
 import { existsSync, statSync, mkdirSync, writeFileSync, readFileSync, unlinkSync, renameSync } from "fs";
-import { join, dirname } from "path";
+import { join, dirname, isAbsolute } from "path";
 import { execSync, spawnSync } from "child_process";
 import { homedir, hostname } from "os";
 import { createHash } from "crypto";
 
 import "../lib/conductor-env-shim";
 import { detectEngineTier, withErrorContext, canonicalizeRemote } from "../lib/gstack-memory-helpers";
-import { ensureSourceRegistered, sourcePageCount, parseSourcesList, cycleCompleted, type CycleStatus } from "../lib/gbrain-sources";
+import { ensureSourceRegistered, sourceIdForPath, sourcePageCount, parseSourcesList, cycleCompleted, type CycleStatus } from "../lib/gbrain-sources";
 import { detectAutopilot, decideSourceRemove, decideCodeSync } from "../lib/gbrain-guards";
 import { localEngineStatus, type LocalEngineStatus } from "../lib/gbrain-local-status";
 import { buildGbrainEnv, spawnGbrain, execGbrainJson, NEEDS_SHELL_ON_WINDOWS } from "../lib/gbrain-exec";
@@ -768,7 +768,7 @@ async function runCodeImport(args: CliArgs): Promise<StageResult> {
     return { name: "code", ran: false, ok: true, duration_ms: 0, summary: "skipped (not in git repo)" };
   }
 
-  const sourceId = deriveCodeSourceId(root);
+  let sourceId = deriveCodeSourceId(root);
 
   // dry-run preview always shows the would-do steps, regardless of local
   // engine state. Useful for "what would /sync-gbrain do" without probing
@@ -808,6 +808,16 @@ async function runCodeImport(args: CliArgs): Promise<StageResult> {
   // inside Next.js / Prisma / Rails projects with their own .env.local
   // (codex review #7 — bug fix is wider than #1508 as filed).
   const gbrainEnv = buildGbrainEnv({ announce: !args.quiet });
+  const existingPathSourceId = sourceIdForPath(root, gbrainEnv);
+  if (existingPathSourceId && existingPathSourceId !== sourceId) {
+    if (!args.quiet) {
+      console.error(
+        `[sync:code] reusing existing source ${existingPathSourceId} for ${root} ` +
+          `(derived ${sourceId} would overlap)`,
+      );
+    }
+    sourceId = existingPathSourceId;
+  }
   const legacyId = deriveLegacyCodeSourceId(root);
   let legacyRemoved = false;
   if (legacyId !== sourceId) {
@@ -983,11 +993,9 @@ async function runCodeImport(args: CliArgs): Promise<StageResult> {
     };
   }
 
-  // v1.29.0.0 changelog promised the per-worktree pin would be ignored in the
-  // consuming repo, but the change actually only added .gbrain-source to
-  // gstack's own .gitignore. Without the consumer-side entry, the pin gets
-  // committed and breaks the per-worktree promise: Conductor sibling worktrees
-  // step on each other's pin every time anyone commits (#1384).
+  // v1.29.0.0 changelog promised the per-worktree pin would be ignored.
+  // Prefer the local git exclude file so gstack does not mutate tracked
+  // project metadata just to protect its machine-local source pin.
   ensureGbrainSourceGitignored(root);
 
   return {
@@ -1007,35 +1015,58 @@ async function runCodeImport(args: CliArgs): Promise<StageResult> {
 }
 
 /**
- * Ensure `.gbrain-source` is listed in the consumer repo's `.gitignore`.
+ * Ensure `.gbrain-source` is ignored for this checkout.
  *
- * Idempotent: only appends when the entry is not already present (matched on
- * trimmed lines so a leading/trailing whitespace difference doesn't add a
- * second copy). Wraps writes in try/catch so a read-only checkout or weird
- * perms logs a warning and lets the rest of the sync continue.
+ * For real git repos, prefer `.git/info/exclude` (resolved through git so
+ * worktrees are handled correctly). Fall back to `.gitignore` only when the
+ * local exclude file cannot be resolved or written.
  */
 export function ensureGbrainSourceGitignored(root: string): void {
-  const gitignorePath = join(root, ".gitignore");
+  const localExcludePath = gitInfoExcludePath(root);
+  if (localExcludePath && appendIgnoreEntry(localExcludePath)) {
+    return;
+  }
+  appendIgnoreEntry(join(root, ".gitignore"));
+}
+
+function gitInfoExcludePath(root: string): string | null {
+  try {
+    const raw = execSync("git rev-parse --git-path info/exclude", {
+      cwd: root,
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    if (!raw) return null;
+    return isAbsolute(raw) ? raw : join(root, raw);
+  } catch {
+    return null;
+  }
+}
+
+function appendIgnoreEntry(ignorePath: string): boolean {
   try {
     let existing = "";
     try {
-      existing = readFileSync(gitignorePath, "utf-8");
+      existing = readFileSync(ignorePath, "utf-8");
     } catch {
-      // No .gitignore yet — we'll create it.
+      // No ignore file yet — we'll create it.
     }
     const alreadyIgnored = existing
       .split("\n")
       .some((line) => line.trim() === ".gbrain-source");
     if (alreadyIgnored) {
-      return;
+      return true;
     }
     const sep = existing.length > 0 && !existing.endsWith("\n") ? "\n" : "";
-    writeFileSync(gitignorePath, existing + sep + ".gbrain-source\n");
+    mkdirSync(dirname(ignorePath), { recursive: true });
+    writeFileSync(ignorePath, existing + sep + ".gbrain-source\n");
+    return true;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.warn(
-      `[sync:code] could not add .gbrain-source to ${gitignorePath}: ${msg}`,
+      `[sync:code] could not add .gbrain-source to ${ignorePath}: ${msg}`,
     );
+    return false;
   }
 }
 
