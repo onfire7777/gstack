@@ -65,6 +65,17 @@ export function parseSourcesList(raw: unknown): GbrainSourceRow[] {
   return [];
 }
 
+/** Return the registered source id that already owns `localPath`, if any. */
+export function sourceIdForPath(localPath: string, env?: NodeJS.ProcessEnv): string | null {
+  const raw = execGbrainJson<unknown>(
+    ["sources", "list", "--json"],
+    { baseEnv: env },
+  );
+  if (!raw) return null;
+  const found = parseSourcesList(raw).find((s) => s.local_path === localPath && typeof s.id === "string");
+  return found?.id ?? null;
+}
+
 export interface EnsureOptions {
   /** Pass --federated to `gbrain sources add`. Default false. */
   federated?: boolean;
