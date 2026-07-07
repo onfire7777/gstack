@@ -14,6 +14,7 @@ import { chromium, type Browser } from 'playwright';
 import * as net from 'net';
 import * as http from 'http';
 import { startSocksBridge, type BridgeHandle } from '../src/socks-bridge';
+import { browserE2EDisabledOnWindows, describeBrowserE2E } from './browser-e2e-guard';
 
 interface MockUpstream {
   port: number;
@@ -111,13 +112,14 @@ async function startHttpFixture(body: string): Promise<{ port: number; close: ()
   };
 }
 
-describe('bridge-chromium-e2e (codex F3)', () => {
+describeBrowserE2E('bridge-chromium-e2e (codex F3)', () => {
   let upstream: MockUpstream;
   let bridge: BridgeHandle;
   let httpFixture: { port: number; close: () => Promise<void>; hits: () => number };
   let browser: Browser;
 
   beforeAll(async () => {
+    if (browserE2EDisabledOnWindows) return;
     upstream = await startAuthUpstream('alice', 'wonderland');
     bridge = await startSocksBridge({
       upstream: { host: '127.0.0.1', port: upstream.port, userId: 'alice', password: 'wonderland' },
@@ -130,6 +132,7 @@ describe('bridge-chromium-e2e (codex F3)', () => {
   });
 
   afterAll(async () => {
+    if (browserE2EDisabledOnWindows) return;
     await browser.close();
     await httpFixture.close();
     await bridge.close();

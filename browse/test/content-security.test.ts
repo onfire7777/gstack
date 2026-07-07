@@ -16,6 +16,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { startTestServer } from './test-server';
 import { BrowserManager } from '../src/browser-manager';
+import { browserE2EDisabledOnWindows, describeBrowserE2E } from './browser-e2e-guard';
 import {
   datamarkContent, getSessionMarker, resetSessionMarker,
   wrapUntrustedPageContent, escapeEnvelopeSentinels,
@@ -410,21 +411,23 @@ describe('Chain security', () => {
 
 // ─── 7. Hidden Element Stripping (functional) ───────────────────
 
-describe('Hidden element stripping', () => {
+describeBrowserE2E('Hidden element stripping', () => {
   let testServer: ReturnType<typeof startTestServer>;
   let bm: BrowserManager;
   let baseUrl: string;
 
   beforeAll(async () => {
+    if (browserE2EDisabledOnWindows) return;
     testServer = startTestServer(0);
     baseUrl = testServer.url;
     bm = new BrowserManager();
     await bm.launch();
   });
 
-  afterAll(() => {
+  afterAll(async () => {
+    if (browserE2EDisabledOnWindows) return;
     try { testServer.server.stop(); } catch {}
-    setTimeout(() => process.exit(0), 500);
+    try { await bm?.close?.(); } catch {}
   });
 
   test('detects CSS-hidden elements on injection-hidden page', async () => {

@@ -15,6 +15,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { startTestServer } from './test-server';
 import { BrowserManager } from '../src/browser-manager';
+import { browserE2EDisabledOnWindows, describeBrowserE2E } from './browser-e2e-guard';
 
 const TMP_HOME = path.join(os.tmpdir(), `gstack-domain-e2e-${process.pid}-${Date.now()}`);
 process.env.GSTACK_HOME = TMP_HOME;
@@ -32,6 +33,7 @@ async function fakeBodyPipe(body: string): Promise<string> {
 }
 
 beforeAll(async () => {
+  if (browserE2EDisabledOnWindows) return;
   await fs.rm(TMP_HOME, { recursive: true, force: true });
   await fs.mkdir(path.join(TMP_HOME, 'projects', 'e2e-test-slug'), { recursive: true });
   testServer = startTestServer(0);
@@ -41,12 +43,13 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (browserE2EDisabledOnWindows) return;
   try { await bm.cleanup?.(); } catch {}
   try { testServer.server.stop(); } catch {}
   await fs.rm(TMP_HOME, { recursive: true, force: true });
 });
 
-describe('$B domain-skill (E2E gate tier)', () => {
+describeBrowserE2E('$B domain-skill (E2E gate tier)', () => {
   test('save: derives host from active tab, writes quarantined row, list surfaces it', async () => {
     const { handleDomainSkillCommand } = await import('../src/domain-skill-commands');
     // Navigate to a test page (host: 127.0.0.1 in this fixture server)
