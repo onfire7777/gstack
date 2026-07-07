@@ -322,7 +322,10 @@ do_wireup() {
   fi
 
   local sync_out sync_redacted
-  sync_out=$(gbrain sync --repo "$WORKTREE" 2>&1) || {
+  # Scope the sync explicitly. Otherwise gbrain resolves source from the
+  # caller's cwd and can rewrite an unrelated repo's source row when this
+  # helper is launched from inside that repo.
+  sync_out=$(gbrain sync --repo "$WORKTREE" --source "$id" 2>&1) || {
     # Redact any postgres:// URLs from the error message in case gbrain logged
     # a connection error containing the full DSN with password. The user sees
     # "***REDACTED***" instead of credentials in their stderr or any log.

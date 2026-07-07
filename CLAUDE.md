@@ -613,7 +613,7 @@ changes. Rough guideposts (don't treat as rules, treat as smell-checks):
 - **MINOR (X.Y+1.0.0)**: new capability shipped (skill, harness, command, big
   refactor), substantial code reduction (compression, migration), or coordinated
   multi-file change. Net diff over ~2000 lines added/removed, OR a user-visible
-  feature you'd put in a tweet.
+  feature you'd summarize in one sentence.
 - **MAJOR (X+1.0.0.0)**: breaking change to public surface (CLI flag rename,
   skill removed, config format changed), OR a release big enough to be the
   headline of a blog post.
