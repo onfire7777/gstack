@@ -626,7 +626,6 @@ If zero tasks were identified in this review, still touch the JSONL file
 (`: > "$TASKS_FILE"`) so the aggregator sees that the phase produced output
 this run (an empty file means "ran, no findings" — distinct from "didn't run").
 
-
 ### Completion summary
 At the end of the review, fill in and display this summary so the user can see all findings at a glance:
 - Step 0: Scope Challenge — ___ (scope accepted as-is / scope reduced per recommendation)
@@ -849,8 +848,6 @@ staleness detection: if those files are later deleted, the learning can be flagg
 **Only log genuine discoveries.** Don't log obvious things. Don't log things the user
 already knows. A good test: would this insight save time in a future session? If yes, log it.
 
-
-
 ## Brain Calibration Write-Back (Phase 2 / gated)
 
 When the skill makes a typed prediction worth tracking (scope decision,
@@ -888,7 +885,6 @@ eval "$(~/.claude/skills/gstack/bin/gstack-slug 2>/dev/null)" 2>/dev/null || tru
   # (no per-skill invalidation targets configured)
 ```
 
-
 ## Brain Cache Background Refresh
 
 After the skill's work completes (and telemetry has logged), kick a
@@ -900,7 +896,6 @@ from the warm cache.
 eval "$(~/.claude/skills/gstack/bin/gstack-slug 2>/dev/null)" 2>/dev/null || true
 (~/.claude/skills/gstack/bin/gstack-brain-cache refresh --project "$SLUG" 2>/dev/null &) || true
 ```
-
 
 ## Next Steps — Review Chaining
 
@@ -921,4 +916,3 @@ Use AskUserQuestion with only the applicable options:
 
 ## Unresolved decisions
 If the user does not respond to an AskUserQuestion or interrupts to move on, note which decisions were left unresolved. At the end of the review, list these as "Unresolved decisions that may bite you later" — never silently default to an option.
-

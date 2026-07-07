@@ -16,7 +16,6 @@ triggers:
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
 
-
 ## When to invoke this skill
 
 Sends any gstack request to the right skill
@@ -423,8 +422,6 @@ else
 fi
 ```
 
-
-
 Privacy stop-gate: if output shows `ARTIFACTS_SYNC: off`, `artifacts_sync_mode_prompted` is `false`, and gbrain is on PATH or `gbrain doctor --fast --json` works, ask once:
 
 > gstack can publish your artifacts (CEO plans, designs, reports) to a private GitHub repo that GBrain indexes across machines. How much should sync?
@@ -450,7 +447,6 @@ At skill END before telemetry:
 "~/.claude/skills/gstack/bin/gstack-brain-sync" --discover-new 2>/dev/null || true
 "~/.claude/skills/gstack/bin/gstack-brain-sync" --once 2>/dev/null || true
 ```
-
 
 ## Model-Specific Behavioral Patch (claude)
 
