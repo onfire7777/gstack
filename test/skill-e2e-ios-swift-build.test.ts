@@ -302,8 +302,14 @@ function hasSwift(): boolean {
   return r.status === 0;
 }
 
+function hasXCTest(): boolean {
+  const r = spawnSync('swift', ['-e', 'import XCTest'], { stdio: 'pipe' });
+  return r.status === 0;
+}
+
 const swiftAvailable = hasSwift();
 const describeIfSwift = swiftAvailable ? describe : describe.skip;
+const testIfXCTest = hasXCTest() ? test : test.skip;
 
 describeIfSwift('swift build invariants', () => {
   // DebugBridgeUI + DebugBridgeTouch are iOS-only (they link UIKit). Plain
@@ -323,7 +329,7 @@ describeIfSwift('swift build invariants', () => {
     expect(r.status).toBe(0);
   }, 180_000);
 
-  test('XCTest suite for StateServer passes (validates real Swift impl)', () => {
+  testIfXCTest('XCTest suite for StateServer passes (validates real Swift impl)', () => {
     const r = spawnSync('swift', ['test', '--filter', 'DebugBridgeCoreTests'], {
       cwd: FIXTURE_PATH,
       stdio: 'pipe',
