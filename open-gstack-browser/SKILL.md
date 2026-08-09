@@ -1,5 +1,5 @@
 ---
-name: open-gstack-browser
+name: gstack-connect-chrome
 version: 0.2.0
 description: Launch GStack Browser — AI-controlled Chromium with the sidebar extension baked in.
 triggers:

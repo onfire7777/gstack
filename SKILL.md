@@ -1,5 +1,5 @@
 ---
-name: gstack
+name: gstack-command
 preamble-tier: 1
 version: 1.2.0
 description: Router for the gstack skill suite. (gstack)
