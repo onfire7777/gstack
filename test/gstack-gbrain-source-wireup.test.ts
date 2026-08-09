@@ -113,7 +113,10 @@ function run(
   opts: { env?: Record<string, string> } = {}
 ) {
   const env = {
-    PATH: `${fakeBinDir}:${process.env.PATH || '/usr/bin:/bin:/opt/homebrew/bin'}`,
+    // Keep the fake gbrain first, then prefer trusted system tools. These
+    // tests replace HOME, which makes user-level mise shims reject the
+    // temporary directory as untrusted before jq/git can run.
+    PATH: `${fakeBinDir}:/usr/bin:/bin:/usr/sbin:/sbin:${process.env.PATH || ''}`,
     HOME: tmpHome,
     GSTACK_HOME: gstackHome,
     GSTACK_BRAIN_WORKTREE: worktreeDir,

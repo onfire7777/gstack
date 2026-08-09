@@ -9,13 +9,13 @@ import * as fs from 'fs';
 const ROOT = path.resolve(import.meta.dir, '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'bin', 'gstack-config'), 'utf-8');
 
-// Pull out just the gbrain-refresh `ok)` branch so assertions can't be
+// Pull out just the gbrain-refresh usable-status branch so assertions can't be
 // satisfied by unrelated text elsewhere in the file.
 function okBranch(): string {
   const start = SRC.indexOf('gbrain-refresh)');
-  const ok = SRC.indexOf('ok)', start);
+  const ok = SRC.indexOf('ok|timeout|thin-client)', start);
   const end = SRC.indexOf(';;', ok);
-  if (start < 0 || ok < 0 || end < 0) throw new Error('Could not locate gbrain-refresh ok) branch');
+  if (start < 0 || ok < 0 || end < 0) throw new Error('Could not locate gbrain-refresh usable-status branch');
   return SRC.slice(ok, end);
 }
 
