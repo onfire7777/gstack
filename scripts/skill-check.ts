@@ -134,9 +134,10 @@ import { ALL_HOST_CONFIGS } from '../hosts/index';
 
 for (const hostConfig of ALL_HOST_CONFIGS) {
   const hostFlag = hostConfig.name === 'claude' ? '' : ` --host ${hostConfig.name}`;
+  const detectionFlag = hostConfig.name === 'claude' ? ' --respect-detection' : '';
   console.log(`\n  Freshness (${hostConfig.displayName}):`);
   try {
-    execSync(`bun run scripts/gen-skill-docs.ts${hostFlag} --dry-run`, { cwd: ROOT, stdio: 'pipe' });
+    execSync(`bun run scripts/gen-skill-docs.ts${hostFlag}${detectionFlag} --dry-run`, { cwd: ROOT, stdio: 'pipe' });
     console.log(`  \u2705 All ${hostConfig.displayName} generated files are fresh`);
   } catch (err: any) {
     hasErrors = true;
@@ -145,7 +146,7 @@ for (const hostConfig of ALL_HOST_CONFIGS) {
     for (const line of output.split('\n').filter((l: string) => l.startsWith('STALE'))) {
       console.log(`      ${line}`);
     }
-    console.log(`      Run: bun run gen:skill-docs${hostFlag}`);
+    console.log(`      Run: ${hostConfig.name === 'claude' ? 'bun run gen:skill-docs:user' : `bun run gen:skill-docs${hostFlag}`}`);
   }
 }
 
