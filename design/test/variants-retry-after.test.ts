@@ -82,7 +82,8 @@ describe("generateVariant Retry-After handling", () => {
     expect(result.success).toBe(true);
     expect(calls.length).toBe(2);
     const gap = calls[1].ts - calls[0].ts;
-    expect(gap).toBeGreaterThanOrEqual(2500);
+    // HTTP-date has one-second precision, so +3s can encode a wait just over 2s.
+    expect(gap).toBeGreaterThanOrEqual(1900);
     expect(gap).toBeLessThan(4500);
   });
 
