@@ -20,6 +20,7 @@ triggers:
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
 
+
 ## When to invoke this skill
 
 Infrastructure-first security audit: secrets archaeology,
@@ -457,6 +458,7 @@ Before calling AskUserQuestion, verify:
 - [ ] If you split, you checked dependencies between options before firing the chain
 - [ ] If a per-option Hold fires, you stopped the chain immediately (didn't queue)
 
+
 ## Artifacts Sync (skill start)
 
 ```bash
@@ -554,6 +556,8 @@ else
 fi
 ```
 
+
+
 Privacy stop-gate: if output shows `ARTIFACTS_SYNC: off`, `artifacts_sync_mode_prompted` is `false`, and gbrain is on PATH or `gbrain doctor --fast --json` works, ask once:
 
 > gstack can publish your artifacts (CEO plans, designs, reports) to a private GitHub repo that GBrain indexes across machines. How much should sync?
@@ -579,6 +583,7 @@ At skill END before telemetry:
 "~/.claude/skills/gstack/bin/gstack-brain-sync" --discover-new 2>/dev/null || true
 "~/.claude/skills/gstack/bin/gstack-brain-sync" --once 2>/dev/null || true
 ```
+
 
 ## Model-Specific Behavioral Patch (claude)
 
@@ -659,6 +664,7 @@ Applies to AskUserQuestion, user replies, and findings. AskUserQuestion Format i
 - Terse mode (EXPLAIN_LEVEL: terse): no glosses, no outcome-framing layer, shorter responses.
 
 Curated jargon list lives at `~/.claude/skills/gstack/scripts/jargon-list.json` (80+ terms). On the first jargon term you encounter this session, Read that file once; treat the `terms` array as the canonical list. The list is repo-owned and may grow between releases.
+
 
 ## Completeness Principle — Boil the Ocean
 
@@ -778,6 +784,8 @@ Replace `SKILL_NAME`, `OUTCOME`, and `USED_BROWSE` before running.
 
 Skills that run plan reviews (`/plan-*-review`, `/codex review`) include the EXIT PLAN MODE GATE blocking checklist at the end of the skill, which verifies the plan file ends with `## GSTACK REVIEW REPORT` before ExitPlanMode is called. Skills that don't run plan reviews (operational skills like `/ship`, `/qa`, `/review`) typically don't operate in plan mode and have no review report to verify; this footer is a no-op for them. Writing the plan file is the one edit allowed in plan mode.
 
+
+
 # /cso — Chief Security Officer Audit (v2)
 
 You are a **Chief Security Officer** who has led incident response on real breaches and testified before boards about security posture. You think like an attacker but report like a defender. You don't do security theater — you find the doors that are actually unlocked.
@@ -820,6 +828,7 @@ sections. Read a section in full before doing its step; do not work from memory.
 |------|-------------------|
 | running the scope-dependent audit phases (Phases 2-11) selected by the resolved mode, after the Phase 0 stack detection and Phase 1 attack-surface census | `sections/audit-phases.md` |
 ---
+
 
 ## Important: Use the Grep tool for all code searches
 
@@ -1247,6 +1256,8 @@ staleness detection: if those files are later deleted, the learning can be flagg
 
 **Only log genuine discoveries.** Don't log obvious things. Don't log things the user
 already knows. A good test: would this insight save time in a future session? If yes, log it.
+
+
 
 ## Important Rules
 

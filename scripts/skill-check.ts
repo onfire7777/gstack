@@ -10,6 +10,7 @@
 
 import { validateSkill } from '../test/helpers/skill-parser';
 import { discoverTemplates, discoverSkillFiles } from './discover-skills';
+import { getExternalHosts, getHostConfig } from '../hosts/index';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
@@ -63,7 +64,8 @@ for (const file of SKILL_FILES) {
 // ─── Templates ──────────────────────────────────────────────
 
 console.log('\n  Templates:');
-const TEMPLATES = discoverTemplates(ROOT);
+const claudeSkippedSkills = new Set(getHostConfig('claude').generation.skipSkills ?? []);
+const TEMPLATES = discoverTemplates(ROOT).filter(({ tmpl }) => !claudeSkippedSkills.has(path.dirname(tmpl)));
 
 for (const { tmpl, output } of TEMPLATES) {
   const tmplPath = path.join(ROOT, tmpl);
@@ -89,8 +91,6 @@ for (const file of SKILL_FILES) {
 }
 
 // ─── External Host Skills (config-driven) ───────────────────
-
-import { getExternalHosts } from '../hosts/index';
 
 for (const hostConfig of getExternalHosts()) {
   const hostDir = path.join(ROOT, hostConfig.hostSubdir, 'skills');

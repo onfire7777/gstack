@@ -209,6 +209,8 @@ Present the reviewed design doc to the user via AskUserQuestion:
 - B) Revise — specify which sections need changes (loop back to revise those sections)
 - C) Start over — return to Phase 2
 
+
+
 ## Brain Calibration Write-Back (Phase 2 / gated)
 
 When the skill makes a typed prediction worth tracking (scope decision,
@@ -248,6 +250,7 @@ eval "$(~/.claude/skills/gstack/bin/gstack-slug 2>/dev/null)" 2>/dev/null || tru
   ~/.claude/skills/gstack/bin/gstack-brain-cache invalidate competitive-intel --project "$SLUG" 2>/dev/null || true
 ```
 
+
 ## Brain Cache Background Refresh
 
 After the skill's work completes (and telemetry has logged), kick a
@@ -259,6 +262,7 @@ from the warm cache.
 eval "$(~/.claude/skills/gstack/bin/gstack-slug 2>/dev/null)" 2>/dev/null || true
 (~/.claude/skills/gstack/bin/gstack-brain-cache refresh --project "$SLUG" 2>/dev/null &) || true
 ```
+
 
 ---
 
