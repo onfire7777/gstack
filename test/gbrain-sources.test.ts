@@ -155,6 +155,17 @@ describe("sourceIdForPath", () => {
     expect(sourceIdForPath("/Users/me/Mnemosyne", fake.env)).toBeNull();
     fake.cleanup();
   });
+
+  it("keeps the preferred code source when a markdown source shares the repo path", () => {
+    const fake = makeFakeGbrain({
+      sources: [
+        { id: "default", local_path: "/Users/me/Mnemosyne" },
+        { id: "mnemosyne-code", local_path: "/Users/me/Mnemosyne" },
+      ],
+    });
+    expect(sourceIdForPath("/Users/me/Mnemosyne", fake.env, "mnemosyne-code")).toBe("mnemosyne-code");
+    fake.cleanup();
+  });
 });
 
 describe("ensureSourceRegistered", () => {

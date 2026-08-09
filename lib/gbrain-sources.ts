@@ -66,13 +66,14 @@ export function parseSourcesList(raw: unknown): GbrainSourceRow[] {
 }
 
 /** Return the registered source id that already owns `localPath`, if any. */
-export function sourceIdForPath(localPath: string, env?: NodeJS.ProcessEnv): string | null {
+export function sourceIdForPath(localPath: string, env?: NodeJS.ProcessEnv, preferredId?: string): string | null {
   const raw = execGbrainJson<unknown>(
     ["sources", "list", "--json"],
     { baseEnv: env },
   );
   if (!raw) return null;
-  const found = parseSourcesList(raw).find((s) => s.local_path === localPath && typeof s.id === "string");
+  const matches = parseSourcesList(raw).filter((s) => s.local_path === localPath && typeof s.id === "string");
+  const found = matches.find((s) => s.id === preferredId) ?? matches[0];
   return found?.id ?? null;
 }
 

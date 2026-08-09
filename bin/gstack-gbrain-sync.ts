@@ -832,7 +832,7 @@ async function runCodeImport(args: CliArgs): Promise<StageResult> {
   // inside Next.js / Prisma / Rails projects with their own .env.local
   // (codex review #7 — bug fix is wider than #1508 as filed).
   const gbrainEnv = buildGbrainEnv({ announce: !args.quiet });
-  const existingPathSourceId = sourceIdForPath(root, gbrainEnv);
+  const existingPathSourceId = sourceIdForPath(root, gbrainEnv, sourceId);
   if (existingPathSourceId && existingPathSourceId !== sourceId) {
     if (!args.quiet) {
       console.error(
