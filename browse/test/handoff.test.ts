@@ -32,7 +32,7 @@ afterAll(async () => {
   if (browserE2EDisabledOnWindows) return;
   try { testServer.server.stop(); } catch {}
   try { await bm?.close?.(); } catch {}
-});
+}, 10_000);
 
 // ─── Unit Tests: Failure Tracking (no browser needed) ────────────
 

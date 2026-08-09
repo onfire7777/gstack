@@ -76,7 +76,7 @@ afterAll(async () => {
   try { server.stop(); } catch {}
   fs.rmSync(tmpDir, { recursive: true, force: true });
   try { await bm?.close?.(); } catch {}
-});
+}, 10_000);
 
 // ─── DOM Structure ──────────────────────────────────────────────
 

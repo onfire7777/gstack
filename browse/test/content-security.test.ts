@@ -466,7 +466,7 @@ describeBrowserE2E('Hidden element stripping', () => {
     if (browserE2EDisabledOnWindows) return;
     try { testServer.server.stop(); } catch {}
     try { await bm?.close?.(); } catch {}
-  });
+  }, 10_000);
 
   test('detects CSS-hidden elements on injection-hidden page', async () => {
     const page = bm.getPage();
