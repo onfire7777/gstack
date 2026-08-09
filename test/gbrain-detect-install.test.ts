@@ -36,9 +36,17 @@ function run(bin: string, args: string[], opts: RunOpts = {}) {
     ...process.env,
     GSTACK_HOME: tmpHome,
     HOME: tmpHomeReal,
+    // Prefer system tools over HOME-sensitive version-manager shims. The
+    // tests deliberately replace HOME, which can make an otherwise healthy
+    // mise jq shim reject the temporary directory as untrusted.
+    PATH: `/usr/bin:/bin:/usr/sbin:/sbin:${process.env.PATH || ''}`,
     ...(opts.env || {}),
   };
-  const res = spawnSync(bin, args, {
+  // DETECT is a Bun/TypeScript executable. Its PATH-isolation tests must not
+  // also remove the interpreter needed by its env shebang.
+  const command = bin === DETECT ? process.execPath : bin;
+  const commandArgs = bin === DETECT ? [bin, ...args] : args;
+  const res = spawnSync(command, commandArgs, {
     env,
     cwd: opts.cwd,
     encoding: 'utf-8',
